@@ -33,6 +33,16 @@ When running the `play.ipynb` notebook you will play as black. In order to enter
 
 ![square indexing](https://quantumai.google/cirq/experiments/unitary/quantum_chess/images/chess_board_indices.png)
 
+### Testing
+
+For testing purposes I created a [fresh account](https://www.chess.com/member/queen_feeder_1_0) and played 6 games
+
+The model won 2 games, made 1 draw (I offered it to opponent because I had an advantage in terms of pieces, but had too little time), and lost 3 games. In one of the lost games I was 1 move away from a mate, but I ran out of time because I had to manually enter each move
+
+> there are some other lost games on that account (with 0 moves), because I was assigned to play for black side, but at that particular moment I only trained the model based on white moves, so I had to resign
+
+Generally it's pretty good at opennings, however the closer we get to endgame - the worse it becomes
+
 ### TODO
 
 - Convolutional layers
