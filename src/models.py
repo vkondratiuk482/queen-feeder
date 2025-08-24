@@ -1,20 +1,35 @@
 import torch
 from torch import nn
 
-class AlterEgo(nn.Module):
+class PieceSelector(nn.Module):
     def __init__(self):
         super().__init__()
 
         self.layers = nn.Sequential(
-            nn.Linear(64, 128),
+            nn.Flatten(),
+            nn.Linear(8 * 8 * 6, 128),
             nn.ReLU(),
-            nn.Linear(128, 512),
+            nn.Linear(128, 128),
             nn.ReLU(),
-            nn.Linear(512, 1024),
+            nn.Linear(128, 64),
+        )
+        self.loss_fn = nn.CrossEntropyLoss()
+        self.optimizer = torch.optim.Adam(self.parameters(), lr=1e-4)
+    
+    def forward(self, x):
+        return self.layers(x)
+
+class MoveSelector(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+        self.layers = nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(8 * 8 * 6, 128),
             nn.ReLU(),
-            nn.Linear(1024, 2048),
+            nn.Linear(128, 128),
             nn.ReLU(),
-            nn.Linear(2048, 4096),
+            nn.Linear(128, 64),
         )
         self.loss_fn = nn.CrossEntropyLoss()
         self.optimizer = torch.optim.Adam(self.parameters(), lr=1e-4)

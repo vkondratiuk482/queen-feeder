@@ -1,63 +1,67 @@
 import chess
 import numpy as np
 
-UNIQUE_PIECES = 6
-SQUARES_COUNT = 64
+from typing import Tuple, Dict, List
+from numpy.typing import NDArray
+from constants import MOVES_DELIMITER, UNIQUE_PIECES, BOARD_COLUMNS, BOARD_ROWS, FRIENDLY_PIECE, ENEMY_PIECE
 
-# moves - string of moves separated by space, e.g: e4 d5 .....
-def preprocess_game(moves_line):
+def preprocess_game(moves_line: str) -> Tuple[
+    NDArray,
+    NDArray,
+    Dict[int, List[Tuple[NDArray, NDArray]]],
+]:
     board = chess.Board()
-    moves = moves_line.split(' ')
+    moves = moves_line.split(MOVES_DELIMITER)
 
-    X = []
-    y = []
+    piece_selection_X: List[NDArray] = []
+    piece_selection_y: List[NDArray] = []
 
-    for move in moves:
-        X.append(__board_to_vector(board))
-        y.append(__encode_predicted_move(board, move))
+    move_selection: Dict[int, List[Tuple[NDArray, NDArray]]] = {}
 
+    for index, move in enumerate(moves):
+        # TODO: implement board-flipping logic
+        # to train on both white & black moves
+        if index % 2 != 0:
+            board.push_san(move)
+            continue
+
+        input_matrices = board_to_matrices(board)
+        piece_selection_X.append(input_matrices)
+        from_square = get_move_from(board, move)
+        piece_selection_y.append(from_square)
+
+        piece_type = board.piece_at(from_square).piece_type - 1
+        if not piece_type in move_selection:
+            move_selection[piece_type] = []
+        move_selection[piece_type].append((input_matrices, get_move_to(board, move)))
+        
         board.push_san(move)
 
-    return np.array(X), np.array(y)
+    return np.array(piece_selection_X), np.array(piece_selection_y), move_selection
 
-def __board_to_vector(board): 
-    vector = np.zeros(SQUARES_COUNT, dtype=np.float32)
+def board_to_matrices(board: chess.Board) -> NDArray:
+    X = np.zeros(shape=[UNIQUE_PIECES, BOARD_ROWS, BOARD_COLUMNS])
 
     for square in chess.SQUARES:
         piece = board.piece_at(square)
-        if piece:
-            vector[square] = __encode_piece(piece_type=piece.piece_type, is_white=piece.color)
 
-    return vector
+        if not piece:
+            continue
 
-def __encode_predicted_move(board, predicted_move):
-    move = board.parse_san(predicted_move)
+        row = square // BOARD_ROWS
+        column = square % BOARD_COLUMNS
+        piece_type = piece.piece_type - 1
 
-    from_square = chess.square_name(move.from_square)
-    to_square = chess.square_name(move.to_square)
+        X[piece_type, row, column] = FRIENDLY_PIECE if piece.color else ENEMY_PIECE
 
-    return __encode_position(from_square + to_square)
+    return X
 
-def __encode_piece(piece_type, is_white):
-    if is_white:
-        return piece_type
+def get_move_from(board: chess.Board, actual_move: str) -> int:
+    move = board.parse_san(actual_move)
 
-    return piece_type + UNIQUE_PIECES
+    return move.from_square
 
-def __encode_position(move):
-    from_position = __get_square_index(move[0:2])
-    to_position = __get_square_index(move[2:4])
+def get_move_to(board: chess.Board, actual_move: str) -> int:
+    move = board.parse_san(actual_move)
 
-    return from_position * SQUARES_COUNT + to_position
-
-def __decode_position(encoded):
-    to_position = encoded % SQUARES_COUNT
-    from_position = encoded // SQUARES_COUNT
-
-    return (from_position, to_position)
-
-def __get_square_index(square):
-    letter_ascii = ord(square[0])
-    digit = int(square[1])
-
-    return (letter_ascii - ord('a')) + (8 * (digit - 1)) 
+    return move.to_square
